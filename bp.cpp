@@ -190,6 +190,7 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
     }
 }
 
+
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     branch_counter++;
     std::vector<Branch>::iterator it = Search_In_Vec(pc);
@@ -222,27 +223,27 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     if(taken){
         // Updating the hist
         if(IsGlobalHist){
+            int FSM_num = history_to_number(history_list[0], index);
             history_list[0].erase(history_list[0].begin());
             history_list[0].push_back(1);
-            int FSM_num = history_to_number(history_list[0], index);
             // Updating the FSM
             if(IsGlobalTable){
                 if(FSM[0][FSM_num] != 3){
-                    FSM[0][FSM_num]++;
+		    FSM[0][FSM_num]++;
                 }
             }
             else{
                 // Local FSM
                 if(FSM[index][FSM_num] != 3){
-                    FSM[index][FSM_num]++;
+                   FSM[index][FSM_num]++;
                 }
             }
         }
         else{
             // Local hist
+	    int FSM_num = history_to_number(history_list[index], index);
             history_list[index].erase(history_list[index].begin());
             history_list[index].push_back(1);
-            int FSM_num = history_to_number(history_list[index], index);
             // Updating the FSM
             if(IsGlobalTable){
                 if(FSM[0][FSM_num] != 3){
@@ -261,9 +262,9 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
         // Branch not taken
         // Updating the hist
         if(IsGlobalHist){
+	    int FSM_num = history_to_number(history_list[0], index);
             history_list[0].erase(history_list[0].begin());
             history_list[0].push_back(0);
-            int FSM_num = history_to_number(history_list[0], index);
             // Updating the FSM
             if(IsGlobalTable){
                 if(FSM[0][FSM_num] != 0){
@@ -279,9 +280,9 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
         }
         else{
             // Local hist
+	    int FSM_num = history_to_number(history_list[index], index);
             history_list[index].erase(history_list[index].begin());
             history_list[index].push_back(0);
-            int FSM_num = history_to_number(history_list[index], index);
             // Updating the FSM
             if(IsGlobalTable){
                 if(FSM[0][FSM_num] != 0){
@@ -296,16 +297,23 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
             }
         }
     }
-    if(targetPc != pred_dst){
-        flush_counter++;
-    }
+    if(targetPc == pred_dst && taken){
+	// Prediction is correct and branch taken
 	return;
+    }
+    else if((pc + 4) == pred_dst && !taken){
+	// Prediction is correct and branch not taken
+	return;
+    }
+    // Wrong prediction
+    flush_counter++;
+    return;
 }
 
 void BP_GetStats(SIM_stats *curStats){
     curStats->br_num = branch_counter;
     curStats->flush_num = flush_counter;
-    int predictor_size = (TagSize + 32) * new_lines; // Tag size + Target pc size
+    int predictor_size = (TagSize + 30 + 1) * new_lines; // Tag size + Target pc size - 2bits redundent + valid bit
     if(IsGlobalHist){
         predictor_size += HistorySize;
     }
