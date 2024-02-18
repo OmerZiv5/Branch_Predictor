@@ -10,11 +10,13 @@ public:
     uint32_t tag;
     uint32_t pc;
     uint32_t target_pc;
+    bool valid;
 
     Branch(){
         tag = -1;
         pc = -1;
         target_pc = -1;
+	valid = false;
     }
 
     ~Branch(){}
@@ -53,13 +55,12 @@ int history_to_number(std::vector<int> history, int index){
         hist_num = xored_hist & int((std::pow(2, HistorySize) - 1));
         return hist_num;
     }
-    else if(shared == 2){
-        // Using mid XOR
-        uint32_t shifted_pc = BTB[index].pc >> 16; // Doing XOR with the middle of pc
-        int xored_hist = hist_num ^ shifted_pc;
-        hist_num = xored_hist & int((std::pow(2, HistorySize) - 1));
-        return hist_num;
-    }
+    //shared=2
+    // Using mid XOR
+    uint32_t shifted_pc = BTB[index].pc >> 16; // Doing XOR with the middle of pc
+    int xored_hist = hist_num ^ shifted_pc;
+    hist_num = xored_hist & int((std::pow(2, HistorySize) - 1));
+    return hist_num;
 }
 
 int calc_index(std::vector<Branch>::iterator it){
@@ -96,7 +97,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
     if(fsmState < 0 || fsmState > 3){
         return -1;
     }
-    if(Shared < 0 || Shared > 2){
+    if(Shared != 0 && Shared != 1 && Shared != 2){
         return -1;
     }
 
@@ -108,13 +109,13 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
     IsGlobalTable = isGlobalTable;
     shared = Shared;
     // Inserting empty branches in BTB
-    for(int i = 0; i < btbSize; i++){
+    for(unsigned i = 0; i < btbSize; i++){
         Branch b0;
         BTB.push_back(b0);
     }
     // Initializing history list
     std::vector<int> hist0;
-    for(int i = 0; i < historySize; i++){
+    for(unsigned i = 0; i < historySize; i++){
         hist0.push_back(0);
     }
     if(IsGlobalHist){
@@ -122,14 +123,14 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
     }
     else{
         // Local hist
-        for(int j = 0; j < btbSize; j++){
+        for(unsigned j = 0; j < btbSize; j++){
             history_list.push_back(hist0);
         }
     }
 
     // Initializing FSM list
     std::vector<int> fsm0;
-    for(int i = 0; i < std::pow(2, historySize); i++){
+    for(int i = 0; i < (int)(std::pow(2, historySize)); i++){
         fsm0.push_back(fsmState);
     }
     if(IsGlobalTable){
@@ -137,7 +138,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
     }
     else{
         // Local FSM
-        for(int j = 0; j < btbSize; j++){
+        for(unsigned j = 0; j < btbSize; j++){
             FSM.push_back(fsm0);
         }
     }
@@ -195,15 +196,16 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     int index = calc_index(it);
     if(it->tag != get_tag_from_pc(pc)) {
         // The branch does not exist in the BTB
-        if(it->tag == -1){
+        if(it->valid == false){
             new_lines++;
+	    it->valid = true;
         }
         it->pc = pc;
         it->target_pc = targetPc;
         it->tag = get_tag_from_pc(pc);
         if(!IsGlobalHist){
             // Local Hist
-            for(int i = 0; i < HistorySize; i++) {
+            for(unsigned i = 0; i < HistorySize; i++) {
                 // Setting history to 0
                 history_list[index][i] = 0;
             }
