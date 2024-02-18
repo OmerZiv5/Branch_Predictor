@@ -13,9 +13,9 @@ extern "C" {
 
 /* A structure to return information about the currect simulator state */
 typedef struct {
-    unsigned flush_num;           // Machine flushes
-    unsigned br_num;      	      // Number of branch instructions
-    unsigned size;		      // Theoretical allocated BTB and branch predictor size
+	unsigned flush_num;           // Machine flushes
+	unsigned br_num;      	      // Number of branch instructions
+	unsigned size;		      // Theoretical allocated BTB and branch predictor size
 } SIM_stats;
 
 /*************************************************************************/
@@ -28,7 +28,7 @@ typedef struct {
  * return 0 on success, otherwise (init failure) return <0
  */
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
-            bool isGlobalHist, bool isGlobalTable, int Shared);
+bool isGlobalHist, bool isGlobalTable, int Shared);
 
 /*
  * BP_predict - returns the predictor's prediction (taken / not taken) and predicted target address
